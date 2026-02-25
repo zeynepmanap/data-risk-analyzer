@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <h2 class="mb-4 text-center">Risk Assessment</h2>
+
+    <!-- Risk Form -->
+    <form method="POST" action="{{ url_for('dashboard') }}">
+        <div class="mb-3">
+            <label>Password Strength (1-5)</label>
+            <input type="number" name="password_strength" min="1" max="5" class="form-control" required>
+        </div>
+
+        <div class="mb-3">
+            <label>Two Factor Authentication</label>
+            <select name="two_factor" class="form-control">
+                <option value="1">Enabled</option>
+                <option value="0">Disabled</option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label>Number of Open Ports</label>
+            <input type="number" name="open_ports" class="form-control" required>
+        </div>
+
+        <div class="mb-3">
+            <label>Software Updated</label>
+            <select name="software_updated" class="form-control">
+                <option value="1">Yes</option>
+                <option value="0">No</option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label>Data Encryption</label>
+            <select name="encryption" class="form-control">
+                <option value="1">Enabled</option>
+                <option value="0">Disabled</option>
+            </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Analyze Risk</button>
+    </form>
+
+    {% if risk_score %}
+    <div class="alert mt-4 
+        {% if risk_level == 'HIGH' %}alert-danger
+        {% elif risk_level == 'MEDIUM' %}alert-warning
+        {% else %}alert-success{% endif %}">
+        <h4>Risk Score: {{ risk_score }}</h4>
+        <p><strong>Level:</strong> {{ risk_level }}</p>
+        <p>{{ recommendation }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Risk Chart -->
+    <div class="card mt-5 p-4 shadow-sm">
+        <h4>Risk Trend</h4>
+        <canvas id="riskChart"></canvas>
+    </div>
+
+    <!-- Previous Records -->
+    <div class="card mt-5 p-4 shadow-sm">
+        <h4>Previous Risk Records</h4>
+
+        {% if average_score %}
+        <p><strong>Average Score:</strong> {{ average_score }}</p>
+        {% endif %}
+
+        {% if trend %}
+        <p><strong>Trend:</strong> {{ trend }}</p>
+        {% endif %}
+
+        <table class="table table-striped mt-3">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Score</th>
+                    <th>Level</th>
+                    <th>Recommendation</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in history %}
+                <tr>
+                    <td>{{ r.timestamp.strftime("%Y-%m-%d %H:%M") }}</td>
+                    <td>{{ r.score }}</td>
+                    <td>{{ r.level }}</td>
+                    <td>{{ r.recommendation }}</td>
+                    <td>
+                        <form method="POST" action="{{ url_for('delete_record', record_id=r.id) }}">
+                            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Delete All Button -->
+        <form method="POST" action="{{ url_for('delete_all') }}">
+            <button type="submit" class="btn btn-danger mt-3">Delete All Records</button>
+        </form>
+
+    </div>
+
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctx = document.getElementById('riskChart').getContext('2d');
+
+    const riskChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [{% for r in history %}'{{ r.timestamp.strftime("%d %b %H:%M") }}',{% endfor %}],
+            datasets: [{
+                label: 'Risk Score',
+                data: [{% for r in history %}{{ r.score }},{% endfor %}],
+                borderColor: '#4e73df',
+                backgroundColor: '#4e73df',
+                fill: false,
+                tension: 0.3
+            }]
+        },
+        options: {
+            plugins: {
+                legend: {
+                    labels: {
+                        color: '#000000'
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        color: '#000000'
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    max: 30,
+                    ticks: {
+                        color: '#000000'
+                    }
+                }
+            }
+        }
+    });
+</script>
+
+{% endblock %}
